@@ -49,7 +49,7 @@ def textFSearch(cc_path, regex_list, mask):
     line_counter = 1
     with open(cc_path, 'r', encoding="latin-1") as cc_file_data:
         for cc_file_line in cc_file_data:
-            counter += searchInLine(cc_file_line, "Line " +
+            counter += searchInLine(cc_file_line, "Line_" +
                                     str(line_counter), cc_path, regex_list, mask)
             line_counter += 1
     return counter
