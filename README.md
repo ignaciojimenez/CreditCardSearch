@@ -1,6 +1,5 @@
 # Credit Card Search
 Simple python script designed to extract text from any file and find known credit card patterns (defined in regexcard.csv).
-Still in development stage
 
 **Tested file types:**
 * txt
@@ -11,13 +10,13 @@ Still in development stage
 * xml
 * html
 * json
+* zip
 
 **Currently unsupported file types:**
 * doc
 * docx
 * pdf
 * pptx
-* zip
 * jpg
 * gif
 * png

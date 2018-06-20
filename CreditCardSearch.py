@@ -4,8 +4,10 @@ import sys
 import getopt
 import os
 import zipfile
+import shutil
 # Installed modules
 import xlrd
+from PyPDF2 import PdfFileReader
 
 
 def checksum(string):
@@ -55,7 +57,32 @@ def textFSearch(cc_path, regex_list, mask):
     return counter
 
 
-def ExcelFSearch(cc_path, regex_list, mask):
+def pdfFSearch(cc_path, regex_list, mask):
+    '''
+    Looks for credit cards within a given Excel File
+    Retuns int total of credit cards found
+    '''
+    pdfCounter = 0
+    pdfReader = PdfFileReader(open(cc_path, 'rb'))
+    count = 0
+    text = ""
+    print(pdfReader.numPages)
+    # While loop will read each page
+    while count < pdfReader.numPages:
+        pageObj = pdfReader.getPage(count)
+        count += 1
+        print(pageObj.extractText())
+        print("----------------------------------")
+        text += pageObj.extractText()
+
+    # This if statement exists to check if the above library returned #words. It's done because PyPDF2 cannot read scanned files.
+    if text != "":
+        text = text
+    # counter += searchInLine(','.join(sheet.row_values(row)), str(sheet.name) + "_row" + str(row), cc_path, regex_list, mask)
+    return pdfCounter
+
+
+def excelFSearch(cc_path, regex_list, mask):
     '''
     Looks for credit cards within a given Excel File
     Retuns int total of credit cards found
@@ -74,14 +101,23 @@ def zipFSearch(cc_path, regex_list, mask):
     Looks for credit cards within a given zip File
     Retuns int total of credit cards found
     '''
-    # TODO Iterate over the whole path
-    zfile = zipfile.ZipFile(cc_path)
-    for finfo in zfile.infolist():
-        ifile = zfile.open(finfo)
-        # line_list = ifile.readline()
-        print("TODO: ZIP --> " + str(ifile))
-        # searchInFile(ifile, regex_list, mask)
-    return 0
+    # TODO Print relative paths not absolute
+    zipCount = 0
+    with zipfile.ZipFile(cc_path, 'r') as zfile:
+        print("-- Opening ZIP FILE --> " + cc_path)
+        for finfo in zfile.infolist():
+            fileCount = 0
+            fileCount += searchInFile(zfile.extract(finfo), regex_list, mask)
+            fileCount = (0 if fileCount < 0 else fileCount)
+            print(os.path.join(cc_path, finfo.filename) + " --> " +
+                  str(fileCount) + " credit cards in file - Inside ZIP file")
+            zipCount += fileCount
+            if "/" in finfo.filename:
+                shutil.rmtree(finfo.filename.split("/")[0])
+            else:
+                os.remove(finfo.filename)
+    print("-- End of ZIP FILE --> " + cc_path)
+    return zipCount
 
 
 def searchInFile(cc_path, regex_list, mask):
@@ -89,16 +125,52 @@ def searchInFile(cc_path, regex_list, mask):
     Looks for credit cards within a given file
     Retuns int total of credit cards found, -1 if file is not supported
     '''
-    if any(cc_path[-3:].lower() in s for s in ['xls', 'xlsx']):
-        return ExcelFSearch(cc_path, regex_list, mask)
-    elif any(cc_path[-3:].lower() in s for s in ['zip']):
-        return zipFSearch(cc_path, regex_list, mask)
-    elif any(cc_path[-3:].lower() in s for s in unsupported_files):
+    if any(cc_path[-3:].lower() in s for s in unsupported_files):
         print(cc_path + " --> Unsupported file")
         return -1
+    elif any(cc_path[-3:].lower() in s for s in ['xls', 'xlsx']):
+        return excelFSearch(cc_path, regex_list, mask)
+    elif any(cc_path[-3:].lower() in s for s in ['pdf']):
+        return pdfFSearch(cc_path, regex_list, mask)
+    elif zipfile.is_zipfile(cc_path):
+        return zipFSearch(cc_path, regex_list, mask)
     else:
         # TODO Auto-find out if file can be read as plain text
         return textFSearch(cc_path, regex_list, mask)
+
+
+def searchInDir(cc_path, regex_list, mask):
+    '''
+    Searchs for credit cards in files contained within a given path
+    Returns tuple containing Files read, Files analyzed, Files including credit cards, Total credit cards found
+    '''
+    count_cc_total = 0  # Total credit cards found in files
+    count_nocc_files = 0  # Files containing no credit cards
+    count_discarded_files = 0  # Files discarded because they are not supported
+    count_cc_files = 0  # Files containing credit cards
+
+    # Loop over the given path
+    for root, dirs, files in os.walk(cc_path):
+        for filename in files:
+            count_fichero = searchInFile(
+                os.path.join(root, filename), regex_list, mask)
+            # If CC found
+            if count_fichero > 0:
+                count_cc_files += 1
+                print(os.path.join(root, filename) + " --> " +
+                      str(count_fichero) + " credit cards in file")
+            # If no CC found
+            elif count_fichero == 0:
+                print(os.path.join(root, filename) + " --> " +
+                      str(count_fichero) + " credit cards in file")
+                count_nocc_files += 1
+            # If file was discarded
+            elif count_fichero < 0:
+                count_discarded_files += 1
+                count_fichero = 0
+            # Add total CC found during execution
+            count_cc_total += count_fichero
+    return count_cc_files + count_discarded_files + count_nocc_files, count_cc_files + count_nocc_files, count_cc_files, count_cc_total
 
 
 if __name__ == '__main__':
@@ -133,10 +205,10 @@ if __name__ == '__main__':
             masking = False
 
     # File extension support variables
-    # TODO Zip, PDF, docx, pptx, etc.
-    tested_files = ['txt', 'csv', 'xls', 'xlsx', 'rtf', 'xml', 'html', 'json']
-    unsupported_files = ['doc', 'docx', 'pdf', 'pptx',
-                         'zip', 'jpg', 'gif', 'png', 'mp3', 'mp4', 'wav', 'aiff', 'mkv', 'avi']
+    # TODO PDF, docx, pptx, etc.
+    tested_files = ['txt', 'csv', 'xls', 'xlsx', 'rtf', 'xml', 'html', 'json', 'zip', 'pdf']
+    unsupported_files = ['doc', 'docx', 'pptx', 'jpg', 'gif', 'pdf',
+                         'png', 'mp3', 'mp4', 'wav', 'aiff', 'mkv', 'avi', 'exe', 'dll']
 
     # Print memo when the script starts
     print("[" + time.ctime() + "] CreditCardSearch started")
@@ -151,46 +223,19 @@ if __name__ == '__main__':
 
     # If the script has received a directory to search
     if inputdir:
-        count_cc_total = 0  # Total credit cards found in files
-        count_nocc_files = 0  # Files containing no credit cards
-        count_discarded_files = 0  # Files discarded because they are not supported
-        count_cc_files = 0  # Files containing credit cards
-
-        # Loop over the given path
-        for root, dirs, files in os.walk(inputdir):
-            for filename in files:
-                count_fichero = searchInFile(
-                    os.path.join(root, filename), regex_list, masking)
-                # If CC found
-                if count_fichero > 0:
-                    count_cc_files += 1
-                    print(os.path.join(root, filename) + " --> " +
-                          str(count_fichero) + " credit cards in file")
-                # If no CC found
-                elif count_fichero == 0:
-                    print(os.path.join(root, filename) + " --> " +
-                          str(count_fichero) + " credit cards in file")
-                    count_nocc_files += 1
-                # If file was discarded
-                elif count_fichero < 0:
-                    count_discarded_files += 1
-                    count_fichero = 0
-                # Add total CC found during execution
-                count_cc_total += count_fichero
-
-        print("\n[" + time.ctime() + "] ")
+        dirResult = searchInDir(inputdir, regex_list, masking)
         print("--- Execution Summary ---")
-        print(str(count_cc_files + count_discarded_files + count_nocc_files) + "\tFiles read")
-        print(str(count_cc_files + count_nocc_files) + "\tFiles analyzed")
-        print(str(count_cc_files) + "\tFiles including credit cards")
-        print(str(count_cc_total) + "\tTotal credit cards found")
-        print("\n--- Disclaimer ---")
-        print("CreditCardSearch tries to read data included in any file and excludes known unsuppoted files")
-        print("Tested files include: %s" % ','.join(tested_files))
-        print("Unsupported files include: %s" % ','.join(unsupported_files))
+        print(str(dirResult[0]) + "\tFiles read")
+        print(str(dirResult[1]) + "\tFiles analyzed")
+        print(str(dirResult[2]) + "\tFiles including credit cards")
+        print(str(dirResult[3]) + "\tTotal credit cards found")
 
     # If the script received a single file to analyze
     elif inputfile:
         print(inputfile + " --> " + str(searchInFile(inputfile,
                                                      regex_list, masking)) + " credit cards in file\n")
-        print("\n[" + time.ctime() + "] CreditCardSearch End")
+
+    print("\n--- Disclaimer ---")
+    print("CreditCardSearch tries to read data included in any file and excludes known unsuppoted files")
+    print("Tested files include: %s" % ','.join(tested_files))
+    print("Unsupported files include: %s" % ','.join(unsupported_files))
