@@ -5,6 +5,7 @@ import getopt
 import os
 import zipfile
 import shutil
+import io
 # Installed modules
 import xlrd
 from PyPDF2 import PdfFileReader
@@ -62,23 +63,25 @@ def pdfFSearch(cc_path, regex_list, mask):
     Looks for credit cards within a given Excel File
     Retuns int total of credit cards found
     '''
-    pdfCounter = 0
-    pdfReader = PdfFileReader(open(cc_path, 'rb'))
-    count = 0
-    text = ""
-    print(pdfReader.numPages)
-    # While loop will read each page
-    while count < pdfReader.numPages:
-        pageObj = pdfReader.getPage(count)
-        count += 1
-        print(pageObj.extractText())
-        print("----------------------------------")
-        text += pageObj.extractText()
+    pdfCounter = 0  # Stores total CC numbers found in pdf
+    pdfPageCount = 0  # Page iterator counter
+    text = ""  # Contains all the extracted text
 
-    # This if statement exists to check if the above library returned #words. It's done because PyPDF2 cannot read scanned files.
-    if text != "":
-        text = text
-    # counter += searchInLine(','.join(sheet.row_values(row)), str(sheet.name) + "_row" + str(row), cc_path, regex_list, mask)
+    pdfReader = PdfFileReader(open(cc_path, 'rb'))
+    # While loop will read each page
+    while pdfPageCount < pdfReader.numPages:
+        pageObj = pdfReader.getPage(pdfPageCount)
+        pdfPageCount += 1
+        text += pageObj.extractText()
+        buf = io.StringIO(pageObj.extractText())
+        linecount = 0
+        for line in buf:
+            linecount += 1
+            pdfCounter += searchInLine(line, "Page" + str(pdfPageCount) +
+                                       "_Line" + str(linecount), cc_path, regex_list, mask)
+    # If everything included in the PDF is scanned (PyPDF cannot extract text from images).
+    if text == "":
+        print(cc_path + " --> PDF file contains no text")
     return pdfCounter
 
 
@@ -207,7 +210,7 @@ if __name__ == '__main__':
     # File extension support variables
     # TODO PDF, docx, pptx, etc.
     tested_files = ['txt', 'csv', 'xls', 'xlsx', 'rtf', 'xml', 'html', 'json', 'zip', 'pdf']
-    unsupported_files = ['doc', 'docx', 'pptx', 'jpg', 'gif', 'pdf',
+    unsupported_files = ['doc', 'docx', 'pptx', 'jpg', 'gif',
                          'png', 'mp3', 'mp4', 'wav', 'aiff', 'mkv', 'avi', 'exe', 'dll']
 
     # Print memo when the script starts

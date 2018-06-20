@@ -11,11 +11,11 @@ Simple python script designed to extract text from any file and find known credi
 * html
 * json
 * zip
+* pdf
 
 **Currently unsupported file types:**
 * doc
 * docx
-* pdf
 * pptx
 * jpg
 * gif
