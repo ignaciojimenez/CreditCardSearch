@@ -30,16 +30,15 @@ def searchInLine(textLine, line_position, cc_path, regex_list, mask):
     # TODO Search for multiple matches within single line
     counter = 0
     for regEx in regex_list:
-        m = re.search(r"%s" % regEx[1].rstrip(), textLine)
-        if m:
-            if checksum(m.group(0)):
-                if mask:
-                    print(cc_path + "\t" + line_position + "\t" + regEx[0].rstrip() + "\t" +
-                          m.group(0)[:6] + "******" + m.group(0)[-4:])
-                else:
-                    print(cc_path + "\t" + line_position + "\t" +
-                          regEx[0].rstrip() + "\t" + m.group(0))
-                counter += 1
+        m = re.finditer(r"%s" % regEx[1], textLine)
+        for match in m:
+            if mask:
+                print(cc_path + "\t" + line_position + "\t" + regEx[0].rstrip() + "\t" +
+                      match.group()[:6] + "******" + match.group()[-4:])
+            else:
+                print(cc_path + "\t" + line_position + "\t" +
+                      regEx[0].rstrip() + "\t" + match.group())
+            counter += 1
     return counter
 
 
