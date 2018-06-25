@@ -27,7 +27,6 @@ def searchInLine(textLine, line_position, cc_path, regex_list, mask):
     Prints the credit card match if it occurs
     Retuns 1 if a CC is found 0 if not
     '''
-    # TODO Search for multiple matches within single line
     counter = 0
     for regEx in regex_list:
         m = re.finditer(r"%s" % regEx[1], textLine)
@@ -172,7 +171,7 @@ def searchInDir(cc_path, regex_list, mask):
                 count_fichero = 0
             # Add total CC found during execution
             count_cc_total += count_fichero
-    return count_cc_files + count_discarded_files + count_nocc_files, count_cc_files + count_nocc_files, count_cc_files, count_cc_total
+    return count_cc_files + count_discarded_files + count_nocc_files, count_cc_files + count_nocc_files, count_discarded_files, count_cc_files, count_cc_total
 
 
 if __name__ == '__main__':
@@ -185,6 +184,7 @@ if __name__ == '__main__':
     # TODO quiet option 1 --> Hide credit card details
     # TODO quiet option 2 --> Hide every file detail (only total execution)
     # TODO Change separator in stdout from \t to ',' for CSV ready processing
+    # TODO Detect if input file or dir are properly passed (isdir, isfile)
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hi:d:m")
     except getopt.GetoptError:
@@ -207,7 +207,7 @@ if __name__ == '__main__':
             masking = False
 
     # File extension support variables
-    # TODO PDF, docx, pptx, etc.
+    # TODO docx, pptx, eml, msg, etc.
     tested_files = ['txt', 'csv', 'xls', 'xlsx', 'rtf', 'xml', 'html', 'json', 'zip', 'pdf']
     unsupported_files = ['doc', 'docx', 'pptx', 'jpg', 'gif',
                          'png', 'mp3', 'mp4', 'wav', 'aiff', 'mkv', 'avi', 'exe', 'dll']
@@ -229,8 +229,9 @@ if __name__ == '__main__':
         print("--- Execution Summary ---")
         print(str(dirResult[0]) + "\tFiles read")
         print(str(dirResult[1]) + "\tFiles analyzed")
-        print(str(dirResult[2]) + "\tFiles including credit cards")
-        print(str(dirResult[3]) + "\tTotal credit cards found")
+        print(str(dirResult[2]) + "\tFiles unsupported")
+        print(str(dirResult[3]) + "\tFiles including credit cards")
+        print(str(dirResult[4]) + "\tTotal credit cards found")
 
     # If the script received a single file to analyze
     elif inputfile:
@@ -239,5 +240,5 @@ if __name__ == '__main__':
 
     print("\n--- Disclaimer ---")
     print("CreditCardSearch tries to read data included in any file and excludes known unsuppoted files")
-    print("Tested files include: %s" % ','.join(tested_files))
-    print("Unsupported files include: %s" % ','.join(unsupported_files))
+    print("Tested files: %s" % ','.join(tested_files))
+    print("Unsupported files: %s" % ','.join(unsupported_files))
